@@ -24,7 +24,9 @@
     "/api/auth/login": {
       "post": {
         "summary": "Login Admin",
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -32,65 +34,96 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": { "type": "string" },
-                  "password": { "type": "string" }
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Login berhasil, return token" },
-          "401": { "description": "Email atau password salah" }
+          "200": {
+            "description": "Login berhasil, return token"
+          },
+          "401": {
+            "description": "Email atau password salah"
+          }
         }
       }
     },
     "/api/sensor/latest": {
       "get": {
         "summary": "Mendapatkan pembacaan ketinggian air terbaru",
-        "tags": ["Sensor IoT"],
+        "tags": [
+          "Sensor IoT"
+        ],
         "responses": {
-          "200": { "description": "Data terbaru sensor" }
+          "200": {
+            "description": "Data terbaru sensor"
+          }
         }
       }
     },
     "/api/sensor/history": {
       "get": {
         "summary": "Mendapatkan riwayat pembacaan ketinggian air",
-        "tags": ["Sensor IoT"],
+        "tags": [
+          "Sensor IoT"
+        ],
         "parameters": [
           {
             "in": "query",
             "name": "limit",
-            "schema": { "type": "integer", "default": 50 },
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
             "description": "Jumlah data yang diambil"
           }
         ],
         "responses": {
-          "200": { "description": "List data riwayat sensor" }
+          "200": {
+            "description": "List data riwayat sensor"
+          }
         }
       }
     },
     "/api/sensor/devices": {
       "get": {
         "summary": "Mendapatkan daftar perangkat sensor dan threshold",
-        "tags": ["Sensor IoT"],
+        "tags": [
+          "Sensor IoT"
+        ],
         "responses": {
-          "200": { "description": "List perangkat sensor" }
+          "200": {
+            "description": "List perangkat sensor"
+          }
         }
       }
     },
     "/api/sensor/devices/{id_sensor}/threshold": {
       "put": {
         "summary": "Mengubah nilai threshold perangkat sensor (Admin)",
-        "tags": ["Sensor IoT"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Sensor IoT"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id_sensor",
             "required": true,
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "description": "ID Sensor (contoh: SN-001)"
           }
         ],
@@ -101,134 +134,52 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "threshold_waspada": { "type": "number" },
-                  "threshold_siaga": { "type": "number" },
-                  "threshold_bahaya": { "type": "number" }
+                  "threshold_waspada": {
+                    "type": "number"
+                  },
+                  "threshold_siaga": {
+                    "type": "number"
+                  },
+                  "threshold_bahaya": {
+                    "type": "number"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Threshold berhasil diubah" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/berita": {
-      "get": {
-        "summary": "Mendapatkan semua berita",
-        "tags": ["Berita"],
-        "responses": {
-          "200": { "description": "List berita" }
-        }
-      },
-      "post": {
-        "summary": "Menambahkan berita baru (Admin)",
-        "tags": ["Berita"],
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "judul": { "type": "string" },
-                  "isi": { "type": "string" },
-                  "gambar": { "type": "string" },
-                  "kategori": { "type": "string" }
-                }
-              }
-            }
+          "200": {
+            "description": "Threshold berhasil diubah"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
-        },
-        "responses": {
-          "201": { "description": "Berita berhasil ditambahkan" },
-          "401": { "description": "Unauthorized" }
-        }
-      }
-    },
-    "/api/berita/{id}": {
-      "get": {
-        "summary": "Mendapatkan detail berita berdasarkan ID",
-        "tags": ["Berita"],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Detail berita" },
-          "404": { "description": "Berita tidak ditemukan" }
-        }
-      },
-      "put": {
-        "summary": "Mengupdate berita (Admin)",
-        "tags": ["Berita"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "judul": { "type": "string" },
-                  "isi": { "type": "string" },
-                  "gambar": { "type": "string" },
-                  "kategori": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Berita berhasil diupdate" },
-          "401": { "description": "Unauthorized" }
-        }
-      },
-      "delete": {
-        "summary": "Menghapus berita (Admin)",
-        "tags": ["Berita"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Berita berhasil dihapus" },
-          "401": { "description": "Unauthorized" }
         }
       }
     },
     "/api/rentan-banjir": {
       "get": {
         "summary": "Mendapatkan semua data kelompok rentan banjir",
-        "tags": ["Kelompok Rentan"],
+        "tags": [
+          "Kelompok Rentan"
+        ],
         "responses": {
-          "200": { "description": "List data kelompok rentan" }
+          "200": {
+            "description": "List data kelompok rentan"
+          }
         }
       },
       "post": {
         "summary": "Menambahkan data kelompok rentan (Admin)",
-        "tags": ["Kelompok Rentan"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -236,31 +187,49 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "kategori_usia": { "type": "string" },
-                  "jumlah_jiwa": { "type": "integer" },
-                  "keterangan": { "type": "string" }
+                  "kategori_usia": {
+                    "type": "string"
+                  },
+                  "jumlah_jiwa": {
+                    "type": "integer"
+                  },
+                  "keterangan": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Data berhasil ditambahkan" },
-          "401": { "description": "Unauthorized" }
+          "201": {
+            "description": "Data berhasil ditambahkan"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/api/rentan-banjir/{id}": {
       "put": {
         "summary": "Mengupdate data kelompok rentan (Admin)",
-        "tags": ["Kelompok Rentan"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {
@@ -270,41 +239,65 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "kategori_usia": { "type": "string" },
-                  "jumlah_jiwa": { "type": "integer" },
-                  "keterangan": { "type": "string" }
+                  "kategori_usia": {
+                    "type": "string"
+                  },
+                  "jumlah_jiwa": {
+                    "type": "integer"
+                  },
+                  "keterangan": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Data berhasil diupdate" },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Data berhasil diupdate"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       },
       "delete": {
         "summary": "Menghapus data kelompok rentan (Admin)",
-        "tags": ["Kelompok Rentan"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Data berhasil dihapus" },
-          "401": { "description": "Unauthorized" }
+          "200": {
+            "description": "Data berhasil dihapus"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
         }
       }
     },
     "/api/pengaduan": {
       "post": {
         "summary": "Mengirim pengaduan baru (Publik/Warga)",
-        "tags": ["Pengaduan"],
+        "tags": [
+          "Pengaduan"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -312,42 +305,68 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "nama_pengirim": { "type": "string" },
-                  "kontak": { "type": "string" },
-                  "isi_pengaduan": { "type": "string" }
+                  "nama_pengirim": {
+                    "type": "string"
+                  },
+                  "kontak": {
+                    "type": "string"
+                  },
+                  "isi_pengaduan": {
+                    "type": "string"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Pengaduan berhasil dikirim" }
+          "201": {
+            "description": "Pengaduan berhasil dikirim"
+          }
         }
       },
       "get": {
         "summary": "Melihat semua pengaduan (Admin)",
-        "tags": ["Pengaduan"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Pengaduan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "List pengaduan" }
+          "200": {
+            "description": "List pengaduan"
+          }
         }
       }
     },
     "/api/pengaduan/{id}": {
       "delete": {
         "summary": "Menghapus pengaduan (Admin)",
-        "tags": ["Pengaduan"],
-        "security": [{ "bearerAuth": [] }],
+        "tags": [
+          "Pengaduan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Pengaduan berhasil dihapus" }
+          "200": {
+            "description": "Pengaduan berhasil dihapus"
+          }
         }
       }
     }

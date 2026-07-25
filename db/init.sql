@@ -33,18 +33,7 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Table Berita
-CREATE TABLE IF NOT EXISTS berita (
-    id SERIAL PRIMARY KEY,
-    judul VARCHAR(255) NOT NULL,
-    isi TEXT NOT NULL,
-    gambar VARCHAR(255),
-    kategori VARCHAR(100),
-    tanggal_publikasi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    penulis_id INT REFERENCES admins(id) ON DELETE SET NULL
-);
-
--- 5. Table Layanan
+-- 4. Table Layanan
 CREATE TABLE IF NOT EXISTS layanan (
     id SERIAL PRIMARY KEY,
     nama_layanan VARCHAR(255) NOT NULL,

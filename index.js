@@ -1,13 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const db = require('./config/db');
-const { startMqttService } = require('./services/mqttService');
-
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
 const sensorRoutes = require('./routes/sensorRoutes');
-const beritaRoutes = require('./routes/beritaRoutes');
 const rentanBanjirRoutes = require('./routes/rentanBanjirRoutes');
 const pengaduanRoutes = require('./routes/pengaduanRoutes');
 
@@ -27,7 +23,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/sensor', sensorRoutes);
-app.use('/api/berita', beritaRoutes);
 app.use('/api/rentan-banjir', rentanBanjirRoutes);
 app.use('/api/pengaduan', pengaduanRoutes);
 // TODO: app.use('/api/layanan', layananRoutes);
@@ -52,3 +47,6 @@ startMqttService();
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
 });
+
+// Export app untuk Vercel Serverless Functions
+module.exports = app;
