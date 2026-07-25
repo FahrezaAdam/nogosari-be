@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const db = require('./config/db');
+const { startMqttService } = require('./services/mqttService');
+
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
 const sensorRoutes = require('./routes/sensorRoutes');
@@ -41,8 +44,10 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Start MQTT Service
-startMqttService();
+// Start MQTT Service (Skip on Vercel to prevent function hang)
+if (!process.env.VERCEL) {
+  startMqttService();
+}
 
 app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
