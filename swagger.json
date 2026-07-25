@@ -333,37 +333,6 @@
         }
       }
     },
-    "/api/pengaduan/{id}/status": {
-      "put": {
-        "summary": "Mengupdate status pengaduan (Admin)",
-        "tags": ["Pengaduan"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "status": { "type": "string", "enum": ["pending", "proses", "selesai"] }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Status pengaduan berhasil diupdate" }
-        }
-      }
-    },
     "/api/pengaduan/{id}": {
       "delete": {
         "summary": "Menghapus pengaduan (Admin)",
