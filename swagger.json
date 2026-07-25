@@ -5,12 +5,6 @@
     "version": "1.0.0",
     "description": "API Documentation untuk Sistem Website Desa Nogosari & Monitoring IoT"
   },
-  "servers": [
-    {
-      "url": "http://localhost:3000",
-      "description": "Local server"
-    }
-  ],
   "components": {
     "securitySchemes": {
       "bearerAuth": {
