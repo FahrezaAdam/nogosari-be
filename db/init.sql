@@ -61,8 +61,7 @@ CREATE TABLE IF NOT EXISTS apbdes (
 CREATE TABLE IF NOT EXISTS kelompok_rentan_banjir (
     id SERIAL PRIMARY KEY,
     kategori_usia VARCHAR(100) UNIQUE NOT NULL,
-    jumlah_jiwa INT NOT NULL DEFAULT 0,
-    keterangan TEXT
+    jumlah_jiwa INT NOT NULL DEFAULT 0
 );
 
 -- 9. Table Pengaduan Warga
@@ -76,11 +75,11 @@ CREATE TABLE IF NOT EXISTS pengaduan (
 );
 
 -- Insert data dummy kelompok rentan banjir
-INSERT INTO kelompok_rentan_banjir (kategori_usia, jumlah_jiwa, keterangan) VALUES 
-('Balita (0-5 tahun)', 120, 'Membutuhkan evakuasi khusus'),
-('Anak-anak (6-12 tahun)', 250, ''),
-('Dewasa (13-59 tahun)', 800, ''),
-('Lansia (>60 tahun)', 85, 'Membutuhkan bantuan mobilitas')
+INSERT INTO kelompok_rentan_banjir (kategori_usia, jumlah_jiwa) VALUES 
+('Balita (0-5 tahun)', 120),
+('Anak-anak (6-12 tahun)', 250),
+('Dewasa (13-59 tahun)', 800),
+('Lansia (>60 tahun)', 85)
 ON CONFLICT (kategori_usia) DO NOTHING;
 
 -- Insert data dummy admin awal (Password default: 'password123' di hash dengan bcrypt)

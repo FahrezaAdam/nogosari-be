@@ -12,11 +12,11 @@ exports.getAll = async (req, res) => {
 
 // Create kelompok rentan baru (Admin)
 exports.create = async (req, res) => {
-  const { kategori_usia, jumlah_jiwa, keterangan } = req.body;
+  const { kategori_usia, jumlah_jiwa } = req.body;
   try {
     const result = await db.query(
-      'INSERT INTO kelompok_rentan_banjir (kategori_usia, jumlah_jiwa, keterangan) VALUES ($1, $2, $3) RETURNING *',
-      [kategori_usia, jumlah_jiwa, keterangan]
+      'INSERT INTO kelompok_rentan_banjir (kategori_usia, jumlah_jiwa) VALUES ($1, $2) RETURNING *',
+      [kategori_usia, jumlah_jiwa]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -26,11 +26,11 @@ exports.create = async (req, res) => {
 
 // Update kelompok rentan (Admin)
 exports.update = async (req, res) => {
-  const { kategori_usia, jumlah_jiwa, keterangan } = req.body;
+  const { kategori_usia, jumlah_jiwa } = req.body;
   try {
     const result = await db.query(
-      'UPDATE kelompok_rentan_banjir SET kategori_usia=$1, jumlah_jiwa=$2, keterangan=$3 WHERE id=$4 RETURNING *',
-      [kategori_usia, jumlah_jiwa, keterangan, req.params.id]
+      'UPDATE kelompok_rentan_banjir SET kategori_usia=$1, jumlah_jiwa=$2 WHERE id=$3 RETURNING *',
+      [kategori_usia, jumlah_jiwa, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);

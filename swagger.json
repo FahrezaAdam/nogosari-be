@@ -196,9 +196,6 @@
                   },
                   "jumlah_jiwa": {
                     "type": "integer"
-                  },
-                  "keterangan": {
-                    "type": "string"
                   }
                 }
               }
@@ -248,9 +245,6 @@
                   },
                   "jumlah_jiwa": {
                     "type": "integer"
-                  },
-                  "keterangan": {
-                    "type": "string"
                   }
                 }
               }
