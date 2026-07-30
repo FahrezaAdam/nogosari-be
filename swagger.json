@@ -191,11 +191,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "kategori_usia": {
-                    "type": "string"
+                  "id_posyandu": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "id_kategori": {
+                    "type": "integer",
+                    "example": 1
                   },
                   "jumlah_jiwa": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 25
                   }
                 }
               }
@@ -240,11 +246,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "kategori_usia": {
-                    "type": "string"
+                  "id_posyandu": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "id_kategori": {
+                    "type": "integer",
+                    "example": 1
                   },
                   "jumlah_jiwa": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 25
                   }
                 }
               }

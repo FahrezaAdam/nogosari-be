@@ -1,5 +1,15 @@
 -- db/init.sql
--- Script untuk membuat tabel-tabel sesuai PRD (Aman dijalankan berulang kali)
+-- Script untuk membuat tabel-tabel sesuai PRD (Menghapus tabel lama & membuat ulang)
+
+-- Drop tabel lama jika sudah ada (Reset Database)
+DROP TABLE IF EXISTS kelompok_rentan_banjir CASCADE;
+DROP TABLE IF EXISTS kategori_rentan CASCADE;
+DROP TABLE IF EXISTS posyandu CASCADE;
+DROP TABLE IF EXISTS sensor_readings CASCADE;
+DROP TABLE IF EXISTS sensor_devices CASCADE;
+DROP TABLE IF EXISTS pengaduan CASCADE;
+DROP TABLE IF EXISTS layanan CASCADE;
+DROP TABLE IF EXISTS admins CASCADE;
 
 -- 1. Table Admin
 CREATE TABLE IF NOT EXISTS admins (
@@ -41,46 +51,73 @@ CREATE TABLE IF NOT EXISTS layanan (
     persyaratan TEXT
 );
 
--- 6. Table Data Statistik
-CREATE TABLE IF NOT EXISTS data_statistik (
+-- 5. Table Master Posyandu
+CREATE TABLE IF NOT EXISTS posyandu (
     id SERIAL PRIMARY KEY,
-    kategori VARCHAR(100) NOT NULL,
-    nilai INT NOT NULL,
-    periode VARCHAR(50)
+    nama_posyandu VARCHAR(150) NOT NULL UNIQUE,
+    dusun VARCHAR(100)
 );
 
--- 7. Table APBDes
-CREATE TABLE IF NOT EXISTS apbdes (
+-- 6. Table Master Kategori Rentan
+CREATE TABLE IF NOT EXISTS kategori_rentan (
     id SERIAL PRIMARY KEY,
-    pos_anggaran VARCHAR(255) NOT NULL,
-    nilai DECIMAL(15, 2) NOT NULL,
-    tahun_anggaran INT NOT NULL
+    nama_kategori VARCHAR(100) NOT NULL UNIQUE
 );
 
--- 8. Table Kelompok Rentan Banjir (Data Penduduk per Usia)
+-- 7. Table Data Kelompok Rentan Banjir (Relasi Posyandu & Kategori Rentan)
 CREATE TABLE IF NOT EXISTS kelompok_rentan_banjir (
     id SERIAL PRIMARY KEY,
-    kategori_usia VARCHAR(100) UNIQUE NOT NULL,
-    jumlah_jiwa INT NOT NULL DEFAULT 0
+    id_posyandu INT REFERENCES posyandu(id) ON DELETE CASCADE,
+    id_kategori INT REFERENCES kategori_rentan(id) ON DELETE CASCADE,
+    jumlah_jiwa INT NOT NULL DEFAULT 0,
+    CONSTRAINT unique_posyandu_kategori_id UNIQUE (id_posyandu, id_kategori)
 );
 
--- 9. Table Pengaduan Warga
+-- 8. Table Pengaduan Warga
 CREATE TABLE IF NOT EXISTS pengaduan (
     id SERIAL PRIMARY KEY,
     nama_pengirim VARCHAR(100) NOT NULL,
     kontak VARCHAR(50),
     isi_pengaduan TEXT NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending',
     tanggal_kirim TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert data dummy kelompok rentan banjir
-INSERT INTO kelompok_rentan_banjir (kategori_usia, jumlah_jiwa) VALUES 
-('Balita (0-5 tahun)', 120),
-('Anak-anak (6-12 tahun)', 250),
-('Dewasa (13-59 tahun)', 800),
-('Lansia (>60 tahun)', 85)
-ON CONFLICT (kategori_usia) DO NOTHING;
+-- Insert Data Master Posyandu
+INSERT INTO posyandu (id, nama_posyandu, dusun) VALUES
+(1, 'Posyandu Bougenville 59 - Krajan', 'Krajan'),
+(2, 'Posyandu Bougenville 60 - Krajan', 'Krajan'),
+(3, 'Posyandu Bougenville 61 - Krajan', 'Krajan'),
+(4, 'Posyandu Bougenville 62 - Gumuk Bago', 'Gumuk Bago'),
+(5, 'Posyandu Bougenville 63 - Gumuk Bago', 'Gumuk Bago')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Data Master Kategori Rentan
+INSERT INTO kategori_rentan (id, nama_kategori) VALUES
+(1, 'Bayi (0-2 tahun)'),
+(2, 'Balita (2-5 tahun)'),
+(3, 'Ibu Hamil'),
+(4, 'Ibu Menyusui'),
+(5, 'Lansia (>60 tahun)'),
+(6, 'Disabilitas')
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Data Kelompok Rentan Banjir (Relasi Posyandu & Kategori)
+INSERT INTO kelompok_rentan_banjir (id_posyandu, id_kategori, jumlah_jiwa) VALUES 
+-- Posyandu 59 (id: 1)
+(1, 1, 25), (1, 2, 25), (1, 3, 50), (1, 4, 160), (1, 5, 20), (1, 6, 20),
+
+-- Posyandu 60 (id: 2)
+(2, 1, 25), (2, 2, 25), (2, 3, 50), (2, 4, 160), (2, 5, 20), (2, 6, 20),
+
+-- Posyandu 61 (id: 3)
+(3, 1, 25), (3, 2, 25), (3, 3, 50), (3, 4, 160), (3, 5, 20), (3, 6, 20),
+
+-- Posyandu 62 (id: 4)
+(4, 1, 25), (4, 2, 25), (4, 3, 50), (4, 4, 160), (4, 5, 20), (4, 6, 20),
+
+-- Posyandu 63 (id: 5)
+(5, 1, 25), (5, 2, 25), (5, 3, 50), (5, 4, 160), (5, 5, 20), (5, 6, 20)
+ON CONFLICT (id_posyandu, id_kategori) DO NOTHING;
 
 -- Insert data dummy admin awal (Password default: 'password123' di hash dengan bcrypt)
 INSERT INTO admins (nama, email, password, role) 
