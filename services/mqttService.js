@@ -4,6 +4,9 @@ const db = require('../config/db');
 // Topik yang disubscribe, bisa menggunakan wildcard (+) untuk semua sensor desa nogosari
 const TOPIC = 'desa/nogosari/sungai/+/ketinggian';
 
+// Cache sederhana untuk menyimpan waktu & nilai pembacaan terakhir per sensor
+const lastReadings = {};
+
 const startMqttService = () => {
   mqttClient.on('connect', () => {
     mqttClient.subscribe(TOPIC, (err) => {
@@ -47,13 +50,40 @@ const startMqttService = () => {
         status_siaga = 'Waspada';
       }
 
+      // === SMART THROTTLING (Penghemat DB Neon) ===
+      const last = lastReadings[id_sensor];
+      const now = Date.now();
+      const MIN_INTERVAL_AMAN = 5 * 60 * 1000; // Minimal simpan 5 menit sekali jika status Aman
+      const MIN_INTERVAL_WARNING = 10 * 1000;  // Minimal simpan 10 detik sekali jika Waspada/Siaga/Bahaya
+
+      if (last) {
+        const timeDiff = now - last.time;
+        const heightDiff = Math.abs(nilai_ketinggian - last.ketinggian);
+
+        // Jika status Aman DAN belum 5 menit DAN perubahan air kurang dari 0.5 cm -> Abaikan simpan ke DB
+        if (status_siaga === 'Aman' && timeDiff < MIN_INTERVAL_AMAN && heightDiff < 0.5) {
+          console.log(`⏳ [THROTTLED] Skip insert for ${id_sensor}: Water status 'Aman' & small change (${heightDiff} cm)`);
+          return;
+        }
+
+        // Jika status Waspada/Siaga/Bahaya tapi jarak pengiriman < 10 detik -> Abaikan simpan
+        if (status_siaga !== 'Aman' && timeDiff < MIN_INTERVAL_WARNING) {
+          return;
+        }
+      }
+
       // Simpan data pembacaan ke database
       await db.query(`
         INSERT INTO sensor_readings (id_sensor, nilai_ketinggian, status_siaga)
         VALUES ($1, $2, $3)
       `, [id_sensor, nilai_ketinggian, status_siaga]);
 
-      // TODO (Future Roadmap): Kirim notifikasi jika status Siaga / Bahaya
+      // Update cache data terakhir
+      lastReadings[id_sensor] = {
+        time: now,
+        ketinggian: nilai_ketinggian,
+        status: status_siaga
+      };
 
     } catch (error) {
       console.error('Error processing MQTT message:', error);

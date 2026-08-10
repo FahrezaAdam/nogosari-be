@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./config/db');
 const { startMqttService } = require('./services/mqttService');
+const { startCleanupCron } = require('./services/cleanupService');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -50,9 +51,10 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Start MQTT Service (Skip on Vercel to prevent function hang)
+// Start MQTT Service & Auto-Cleanup (Skip on Vercel to prevent function hang)
 if (!process.env.VERCEL) {
   startMqttService();
+  startCleanupCron();
 }
 
 app.listen(port, () => {
