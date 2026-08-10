@@ -3,6 +3,9 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  max: 20,                  // Maksimal 20 koneksi bersamaan agar handle trafik IoT cepat
+  idleTimeoutMillis: 30000,// Tutup koneksi menganggur setelah 30 detik
+  connectionTimeoutMillis: 5000, // Timeout cepat (5 detik) jika database sibuk
   ssl: {
     rejectUnauthorized: false
   }
