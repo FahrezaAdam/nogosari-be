@@ -10,6 +10,7 @@ router.get('/kategori', rentanBanjirController.getKategoriList);
 router.get('/summary', rentanBanjirController.getSummary);
 
 // Route Admin (Butuh Auth)
+router.post('/posyandu', authMiddleware, rentanBanjirController.createPosyandu);
 router.post('/', authMiddleware, rentanBanjirController.create);
 router.put('/:id', authMiddleware, rentanBanjirController.update);
 router.delete('/:id', authMiddleware, rentanBanjirController.delete);

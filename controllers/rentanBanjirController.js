@@ -37,6 +37,21 @@ exports.getPosyanduList = async (req, res) => {
   }
 };
 
+// Create posyandu baru (Admin)
+exports.createPosyandu = async (req, res) => {
+  const { nama_posyandu, dusun } = req.body;
+  try {
+    const result = await db.query(
+      'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING *',
+      [nama_posyandu, dusun]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error create posyandu:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Get list kategori rentan
 exports.getKategoriList = async (req, res) => {
   try {
