@@ -37,13 +37,17 @@ exports.getPosyanduList = async (req, res) => {
   }
 };
 
-// Create posyandu baru (Admin)
+// Create posyandu baru (Admin) - Cek Duplikat
 exports.createPosyandu = async (req, res) => {
   const { nama_posyandu, dusun } = req.body;
   try {
+    const existing = await db.query('SELECT * FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1)', [nama_posyandu.trim()]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada di database!` });
+    }
     const result = await db.query(
       'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING *',
-      [nama_posyandu, dusun]
+      [nama_posyandu.trim(), dusun.trim()]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -93,14 +97,19 @@ exports.getSummary = async (req, res) => {
   }
 };
 
-// Save Batch Kelompok Rentan for Posyandu (Admin)
+// Save Batch Kelompok Rentan for Posyandu (Admin) - Cek Duplikat saat Buat Posyandu Baru
 exports.saveBatch = async (req, res) => {
   let { id_posyandu, nama_posyandu, dusun, categories } = req.body;
   try {
     if (!id_posyandu && nama_posyandu) {
+      const existing = await db.query('SELECT id FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1)', [nama_posyandu.trim()]);
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada! Silakan gunakan opsi 'Pilih Posyandu Yang Sudah Ada'.` });
+      }
+
       const posRes = await db.query(
         'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING id',
-        [nama_posyandu, dusun || 'Krajan']
+        [nama_posyandu.trim(), dusun ? dusun.trim() : 'Krajan']
       );
       id_posyandu = posRes.rows[0].id;
     }
