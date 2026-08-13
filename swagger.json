@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Nogosari Backend API",
+    "title": "Dokumentasi API SI-KENCANA & SI-CARE Nogosari",
     "version": "1.0.0",
-    "description": "API Documentation untuk Sistem Website Desa Nogosari & Monitoring IoT"
+    "description": "API backend untuk Sistem Peringatan Dini Bencana (SI-Kencana) dan Manajemen Kelompok Rentan (SI-Care) Desa Nogosari, Kecamatan Rambipuji, Kabupaten Jember."
   },
   "servers": [
     {
-      "url": "/",
-      "description": "Current Domain (Vercel & Local)"
-    },
-    {
       "url": "http://localhost:3000",
       "description": "Local Development Server"
+    },
+    {
+      "url": "https://nogosari-be.vercel.app",
+      "description": "Production Server (Vercel)"
     }
   ],
   "components": {
@@ -24,12 +24,34 @@
       }
     }
   },
+  "tags": [
+    {
+      "name": "Auth Admin",
+      "description": "Authentikasi Admin Posko Desa"
+    },
+    {
+      "name": "Posyandu",
+      "description": "Manajemen Wilayah & Posyandu Desa"
+    },
+    {
+      "name": "Kelompok Rentan",
+      "description": "Data Kelompok Rentan Bencana (SI-Care)"
+    },
+    {
+      "name": "Sensor IoT",
+      "description": "Monitoring Ketinggian Air & Peringatan Dini Bencana (SI-Kencana)"
+    },
+    {
+      "name": "Pengaduan",
+      "description": "Layanan Pengaduan Bencana Warga Desa"
+    }
+  ],
   "paths": {
     "/api/auth/login": {
       "post": {
-        "summary": "Login Admin",
+        "summary": "Login Admin Posko Desa",
         "tags": [
-          "Auth"
+          "Auth Admin"
         ],
         "requestBody": {
           "required": true,
@@ -39,10 +61,12 @@
                 "type": "object",
                 "properties": {
                   "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "admin@nogosari.desa.id"
                   },
                   "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "admin123"
                   }
                 }
               }
@@ -51,10 +75,383 @@
         },
         "responses": {
           "200": {
-            "description": "Login berhasil, return token"
+            "description": "Login berhasil, mengembalikan token JWT dan data user"
           },
           "401": {
             "description": "Email atau password salah"
+          }
+        }
+      }
+    },
+    "/api/posyandu": {
+      "get": {
+        "summary": "Mendapatkan daftar semua Posyandu desa",
+        "tags": [
+          "Posyandu"
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar Posyandu berhasil diambil"
+          }
+        }
+      },
+      "post": {
+        "summary": "Menambahkan Posyandu baru (Admin)",
+        "tags": [
+          "Posyandu"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama_posyandu": {
+                    "type": "string",
+                    "example": "Posyandu Bougenville 64"
+                  },
+                  "dusun": {
+                    "type": "string",
+                    "example": "Krajan"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Posyandu baru berhasil dibuat"
+          },
+          "400": {
+            "description": "Nama Posyandu sudah ada di database atau data tidak valid"
+          },
+          "401": {
+            "description": "Unauthorized / Token tidak valid"
+          }
+        }
+      }
+    },
+    "/api/posyandu/{id}": {
+      "get": {
+        "summary": "Mendapatkan detail 1 Posyandu berdasarkan ID",
+        "tags": [
+          "Posyandu"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail Posyandu ditemukan"
+          },
+          "404": {
+            "description": "Posyandu tidak ditemukan"
+          }
+        }
+      },
+      "put": {
+        "summary": "Mengubah data Posyandu (Admin)",
+        "tags": [
+          "Posyandu"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama_posyandu": {
+                    "type": "string",
+                    "example": "Posyandu Bougenville 59"
+                  },
+                  "dusun": {
+                    "type": "string",
+                    "example": "Krajan"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Posyandu berhasil diperbarui"
+          },
+          "404": {
+            "description": "Posyandu tidak ditemukan"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus data Posyandu (Admin)",
+        "tags": [
+          "Posyandu"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posyandu berhasil dihapus"
+          },
+          "404": {
+            "description": "Posyandu tidak ditemukan"
+          }
+        }
+      }
+    },
+    "/api/rentan-banjir": {
+      "get": {
+        "summary": "Mendapatkan semua data kelompok rentan banjir",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "responses": {
+          "200": {
+            "description": "List data kelompok rentan"
+          }
+        }
+      },
+      "post": {
+        "summary": "Menambahkan data kelompok rentan (Admin)",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_posyandu": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "id_kategori": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "jumlah_jiwa": {
+                    "type": "integer",
+                    "example": 25
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Data berhasil ditambahkan"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/rentan-banjir/batch": {
+      "post": {
+        "summary": "Simpan sekaligus data 6 kategori jiwa rentan untuk Posyandu (Admin)",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_posyandu": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "nama_posyandu": {
+                    "type": "string",
+                    "example": "Posyandu Bougenville 64"
+                  },
+                  "dusun": {
+                    "type": "string",
+                    "example": "Krajan"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id_kategori": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "jumlah_jiwa": {
+                          "type": "integer",
+                          "example": 25
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data batch berhasil disimpan"
+          },
+          "400": {
+            "description": "Posyandu duplikat atau data tidak valid"
+          }
+        }
+      }
+    },
+    "/api/rentan-banjir/summary": {
+      "get": {
+        "summary": "Mendapatkan ringkasan statistik total kelompok rentan",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "responses": {
+          "200": {
+            "description": "Ringkasan total jiwa dan agregasi per kategori / posyandu"
+          }
+        }
+      }
+    },
+    "/api/rentan-banjir/{id}": {
+      "put": {
+        "summary": "Mengupdate data kelompok rentan (Admin)",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_posyandu": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "id_kategori": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "jumlah_jiwa": {
+                    "type": "integer",
+                    "example": 25
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data berhasil diupdate"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus data kelompok rentan (Admin)",
+        "tags": [
+          "Kelompok Rentan"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data berhasil dihapus"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       }
@@ -155,146 +552,6 @@
         "responses": {
           "200": {
             "description": "Threshold berhasil diubah"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/rentan-banjir": {
-      "get": {
-        "summary": "Mendapatkan semua data kelompok rentan banjir",
-        "tags": [
-          "Kelompok Rentan"
-        ],
-        "responses": {
-          "200": {
-            "description": "List data kelompok rentan"
-          }
-        }
-      },
-      "post": {
-        "summary": "Menambahkan data kelompok rentan (Admin)",
-        "tags": [
-          "Kelompok Rentan"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id_posyandu": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "id_kategori": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "jumlah_jiwa": {
-                    "type": "integer",
-                    "example": 25
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Data berhasil ditambahkan"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/rentan-banjir/{id}": {
-      "put": {
-        "summary": "Mengupdate data kelompok rentan (Admin)",
-        "tags": [
-          "Kelompok Rentan"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id_posyandu": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "id_kategori": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "jumlah_jiwa": {
-                    "type": "integer",
-                    "example": 25
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Data berhasil diupdate"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Menghapus data kelompok rentan (Admin)",
-        "tags": [
-          "Kelompok Rentan"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Data berhasil dihapus"
           },
           "401": {
             "description": "Unauthorized"
