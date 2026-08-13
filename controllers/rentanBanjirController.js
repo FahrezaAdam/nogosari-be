@@ -97,14 +97,15 @@ exports.getSummary = async (req, res) => {
   }
 };
 
-// Save Batch Kelompok Rentan for Posyandu (Admin) - Cek Duplikat saat Buat Posyandu Baru
+// Save Batch Kelompok Rentan & Update Posyandu (Admin)
 exports.saveBatch = async (req, res) => {
   let { id_posyandu, nama_posyandu, dusun, categories } = req.body;
   try {
     if (!id_posyandu && nama_posyandu) {
+      // Buat posyandu baru
       const existing = await db.query('SELECT id FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1)', [nama_posyandu.trim()]);
       if (existing.rows.length > 0) {
-        return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada! Silakan gunakan opsi 'Pilih Posyandu Yang Sudah Ada'.` });
+        return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada di database!` });
       }
 
       const posRes = await db.query(
@@ -112,6 +113,16 @@ exports.saveBatch = async (req, res) => {
         [nama_posyandu.trim(), dusun ? dusun.trim() : 'Krajan']
       );
       id_posyandu = posRes.rows[0].id;
+    } else if (id_posyandu && nama_posyandu) {
+      // Edit nama posyandu dan dusun jika ada
+      const existing = await db.query('SELECT id FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1) AND id != $2', [nama_posyandu.trim(), id_posyandu]);
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: `Nama Posyandu '${nama_posyandu.trim()}' sudah digunakan oleh Posyandu lain!` });
+      }
+      await db.query(
+        'UPDATE posyandu SET nama_posyandu = $1, dusun = $2 WHERE id = $3',
+        [nama_posyandu.trim(), (dusun || 'Krajan').trim(), id_posyandu]
+      );
     }
 
     if (!id_posyandu) {
