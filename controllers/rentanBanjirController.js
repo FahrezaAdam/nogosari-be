@@ -1,5 +1,21 @@
 const db = require('../config/db');
 
+// Helper untuk cari id_dusun dari nama dusun
+async function resolveDusun(dusunName) {
+  if (!dusunName) {
+    const krajan = await db.query("SELECT * FROM dusun WHERE nama_dusun LIKE '%Krajan%'");
+    return krajan.rows[0] || { id: 5, nama_dusun: 'Dusun Krajan' };
+  }
+  const cleanName = dusunName.trim();
+  const keyword = cleanName.replace(/^Dusun\s+/i, '').trim();
+  const res = await db.query(
+    'SELECT * FROM dusun WHERE LOWER(nama_dusun) = LOWER($1) OR LOWER(nama_dusun) LIKE LOWER($2)',
+    [cleanName, `%${keyword}%`]
+  );
+  if (res.rows.length > 0) return res.rows[0];
+  return { id: 5, nama_dusun: cleanName };
+}
+
 // Get all kelompok rentan (dengan nama posyandu & nama kategori)
 exports.getAll = async (req, res) => {
   try {
@@ -9,12 +25,14 @@ exports.getAll = async (req, res) => {
         krb.id AS id_rentan,
         p.id AS id_posyandu,
         p.nama_posyandu,
-        p.dusun,
+        COALESCE(d.nama_dusun, p.dusun) AS dusun,
+        COALESCE(p.id_dusun, d.id) AS id_dusun,
         kr.id AS id_kategori,
         kr.nama_kategori,
         krb.jumlah_jiwa
       FROM kelompok_rentan_banjir krb
       JOIN posyandu p ON krb.id_posyandu = p.id
+      LEFT JOIN dusun d ON p.id_dusun = d.id
       JOIN kategori_rentan kr ON krb.id_kategori = kr.id
       ORDER BY p.id ASC, kr.id ASC
     `;
@@ -29,7 +47,16 @@ exports.getAll = async (req, res) => {
 // Get list posyandu
 exports.getPosyanduList = async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM posyandu ORDER BY id ASC');
+    const result = await db.query(`
+      SELECT 
+        p.id, 
+        p.nama_posyandu, 
+        COALESCE(d.nama_dusun, p.dusun) AS dusun, 
+        COALESCE(p.id_dusun, d.id) AS id_dusun
+      FROM posyandu p
+      LEFT JOIN dusun d ON p.id_dusun = d.id
+      ORDER BY p.id ASC
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Error getPosyanduList:', error);
@@ -45,9 +72,10 @@ exports.createPosyandu = async (req, res) => {
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada di database!` });
     }
+    const dusunObj = await resolveDusun(dusun);
     const result = await db.query(
-      'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING *',
-      [nama_posyandu.trim(), dusun.trim()]
+      'INSERT INTO posyandu (nama_posyandu, dusun, id_dusun) VALUES ($1, $2, $3) RETURNING *',
+      [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -79,10 +107,11 @@ exports.getSummary = async (req, res) => {
       ORDER BY kr.id ASC
     `);
     const posyanduResult = await db.query(`
-      SELECT p.id, p.nama_posyandu, p.dusun, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
+      SELECT p.id, p.nama_posyandu, COALESCE(d.nama_dusun, p.dusun) AS dusun, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
       FROM posyandu p
+      LEFT JOIN dusun d ON p.id_dusun = d.id
       LEFT JOIN kelompok_rentan_banjir krb ON p.id = krb.id_posyandu
-      GROUP BY p.id, p.nama_posyandu, p.dusun
+      GROUP BY p.id, p.nama_posyandu, d.nama_dusun, p.dusun
       ORDER BY p.id ASC
     `);
     res.json({
@@ -101,6 +130,8 @@ exports.getSummary = async (req, res) => {
 exports.saveBatch = async (req, res) => {
   let { id_posyandu, nama_posyandu, dusun, categories } = req.body;
   try {
+    const dusunObj = await resolveDusun(dusun);
+
     if (!id_posyandu && nama_posyandu) {
       // Buat posyandu baru
       const existing = await db.query('SELECT id FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1)', [nama_posyandu.trim()]);
@@ -109,8 +140,8 @@ exports.saveBatch = async (req, res) => {
       }
 
       const posRes = await db.query(
-        'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING id',
-        [nama_posyandu.trim(), dusun ? dusun.trim() : 'Krajan']
+        'INSERT INTO posyandu (nama_posyandu, dusun, id_dusun) VALUES ($1, $2, $3) RETURNING id',
+        [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id]
       );
       id_posyandu = posRes.rows[0].id;
     } else if (id_posyandu && nama_posyandu) {
@@ -120,8 +151,8 @@ exports.saveBatch = async (req, res) => {
         return res.status(400).json({ error: `Nama Posyandu '${nama_posyandu.trim()}' sudah digunakan oleh Posyandu lain!` });
       }
       await db.query(
-        'UPDATE posyandu SET nama_posyandu = $1, dusun = $2 WHERE id = $3',
-        [nama_posyandu.trim(), (dusun || 'Krajan').trim(), id_posyandu]
+        'UPDATE posyandu SET nama_posyandu = $1, dusun = $2, id_dusun = $3 WHERE id = $4',
+        [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id, id_posyandu]
       );
     }
 
