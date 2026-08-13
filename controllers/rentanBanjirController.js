@@ -93,6 +93,55 @@ exports.getSummary = async (req, res) => {
   }
 };
 
+// Save Batch Kelompok Rentan for Posyandu (Admin)
+exports.saveBatch = async (req, res) => {
+  let { id_posyandu, nama_posyandu, dusun, categories } = req.body;
+  try {
+    if (!id_posyandu && nama_posyandu) {
+      const posRes = await db.query(
+        'INSERT INTO posyandu (nama_posyandu, dusun) VALUES ($1, $2) RETURNING id',
+        [nama_posyandu, dusun || 'Krajan']
+      );
+      id_posyandu = posRes.rows[0].id;
+    }
+
+    if (!id_posyandu) {
+      return res.status(400).json({ error: 'id_posyandu atau nama_posyandu wajib diisi' });
+    }
+
+    const results = [];
+    const catEntries = Array.isArray(categories) 
+      ? categories 
+      : Object.entries(categories || {}).map(([id_kategori, jumlah_jiwa]) => ({ id_kategori: Number(id_kategori), jumlah_jiwa: Number(jumlah_jiwa) }));
+
+    for (const cat of catEntries) {
+      const checkRes = await db.query(
+        'SELECT id FROM kelompok_rentan_banjir WHERE id_posyandu = $1 AND id_kategori = $2',
+        [id_posyandu, cat.id_kategori]
+      );
+
+      if (checkRes.rows.length > 0) {
+        const updateRes = await db.query(
+          'UPDATE kelompok_rentan_banjir SET jumlah_jiwa = $1 WHERE id = $2 RETURNING *',
+          [cat.jumlah_jiwa, checkRes.rows[0].id]
+        );
+        results.push(updateRes.rows[0]);
+      } else {
+        const insertRes = await db.query(
+          'INSERT INTO kelompok_rentan_banjir (id_posyandu, id_kategori, jumlah_jiwa) VALUES ($1, $2, $3) RETURNING *',
+          [id_posyandu, cat.id_kategori, cat.jumlah_jiwa]
+        );
+        results.push(insertRes.rows[0]);
+      }
+    }
+
+    res.status(200).json({ message: 'Batch save successful', id_posyandu, rows: results });
+  } catch (error) {
+    console.error('Error saveBatch rentan banjir:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Create kelompok rentan baru (Admin)
 exports.create = async (req, res) => {
   const { id_posyandu, id_kategori, jumlah_jiwa } = req.body;
