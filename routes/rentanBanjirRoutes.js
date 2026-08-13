@@ -5,6 +5,9 @@ const authMiddleware = require('../middlewares/authMiddleware');
 
 // Route Publik
 router.get('/', rentanBanjirController.getAll);
+router.get('/posyandu', rentanBanjirController.getPosyanduList);
+router.get('/kategori', rentanBanjirController.getKategoriList);
+router.get('/summary', rentanBanjirController.getSummary);
 
 // Route Admin (Butuh Auth)
 router.post('/', authMiddleware, rentanBanjirController.create);

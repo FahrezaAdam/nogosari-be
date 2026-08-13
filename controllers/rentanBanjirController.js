@@ -6,6 +6,7 @@ exports.getAll = async (req, res) => {
     const queryText = `
       SELECT 
         krb.id,
+        krb.id AS id_rentan,
         p.id AS id_posyandu,
         p.nama_posyandu,
         p.dusun,
@@ -21,6 +22,58 @@ exports.getAll = async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error getAll rentan banjir:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get list posyandu
+exports.getPosyanduList = async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM posyandu ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error getPosyanduList:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get list kategori rentan
+exports.getKategoriList = async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM kategori_rentan ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error getKategoriList:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get summary ringkasan statistik
+exports.getSummary = async (req, res) => {
+  try {
+    const totalResult = await db.query('SELECT COALESCE(SUM(jumlah_jiwa), 0) AS total_jiwa, COUNT(*) AS total_records FROM kelompok_rentan_banjir');
+    const kategoriResult = await db.query(`
+      SELECT kr.id, kr.nama_kategori, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
+      FROM kategori_rentan kr
+      LEFT JOIN kelompok_rentan_banjir krb ON kr.id = krb.id_kategori
+      GROUP BY kr.id, kr.nama_kategori
+      ORDER BY kr.id ASC
+    `);
+    const posyanduResult = await db.query(`
+      SELECT p.id, p.nama_posyandu, p.dusun, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
+      FROM posyandu p
+      LEFT JOIN kelompok_rentan_banjir krb ON p.id = krb.id_posyandu
+      GROUP BY p.id, p.nama_posyandu, p.dusun
+      ORDER BY p.id ASC
+    `);
+    res.json({
+      total_jiwa: Number(totalResult.rows[0].total_jiwa),
+      total_records: Number(totalResult.rows[0].total_records),
+      by_kategori: kategoriResult.rows.map(r => ({ ...r, total_jiwa: Number(r.total_jiwa) })),
+      by_posyandu: posyanduResult.rows.map(r => ({ ...r, total_jiwa: Number(r.total_jiwa) })),
+    });
+  } catch (error) {
+    console.error('Error getSummary rentan banjir:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
