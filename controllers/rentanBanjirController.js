@@ -1,22 +1,25 @@
 const db = require('../config/db');
 
-// Helper untuk cari id_dusun dari nama dusun
-async function resolveDusun(dusunName) {
-  if (!dusunName) {
-    const krajan = await db.query("SELECT * FROM dusun WHERE nama_dusun LIKE '%Krajan%'");
-    return krajan.rows[0] || { id: 5, nama_dusun: 'Dusun Krajan' };
+// Helper untuk cari id_dusun dari nama dusun atau ID
+async function resolveDusunId(dusunInput) {
+  if (typeof dusunInput === 'number' || !isNaN(Number(dusunInput))) {
+    return Number(dusunInput);
   }
-  const cleanName = dusunName.trim();
+  if (!dusunInput) {
+    const krajan = await db.query("SELECT id FROM dusun WHERE nama_dusun LIKE '%Krajan%'");
+    return krajan.rows[0]?.id || 5;
+  }
+  const cleanName = String(dusunInput).trim();
   const keyword = cleanName.replace(/^Dusun\s+/i, '').trim();
   const res = await db.query(
-    'SELECT * FROM dusun WHERE LOWER(nama_dusun) = LOWER($1) OR LOWER(nama_dusun) LIKE LOWER($2)',
+    'SELECT id FROM dusun WHERE LOWER(nama_dusun) = LOWER($1) OR LOWER(nama_dusun) LIKE LOWER($2)',
     [cleanName, `%${keyword}%`]
   );
-  if (res.rows.length > 0) return res.rows[0];
-  return { id: 5, nama_dusun: cleanName };
+  if (res.rows.length > 0) return res.rows[0].id;
+  return 5;
 }
 
-// Get all kelompok rentan (dengan nama posyandu & nama kategori)
+// Get all kelompok rentan (dengan nama posyandu & nama kategori & dusun dari JOIN)
 exports.getAll = async (req, res) => {
   try {
     const queryText = `
@@ -25,8 +28,8 @@ exports.getAll = async (req, res) => {
         krb.id AS id_rentan,
         p.id AS id_posyandu,
         p.nama_posyandu,
-        COALESCE(d.nama_dusun, p.dusun) AS dusun,
-        COALESCE(p.id_dusun, d.id) AS id_dusun,
+        p.id_dusun,
+        COALESCE(d.nama_dusun, 'Dusun Krajan') AS dusun,
         kr.id AS id_kategori,
         kr.nama_kategori,
         krb.jumlah_jiwa
@@ -44,15 +47,15 @@ exports.getAll = async (req, res) => {
   }
 };
 
-// Get list posyandu
+// Get list posyandu (JOIN tabel dusun)
 exports.getPosyanduList = async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
         p.id, 
         p.nama_posyandu, 
-        COALESCE(d.nama_dusun, p.dusun) AS dusun, 
-        COALESCE(p.id_dusun, d.id) AS id_dusun
+        p.id_dusun,
+        COALESCE(d.nama_dusun, 'Dusun Krajan') AS dusun
       FROM posyandu p
       LEFT JOIN dusun d ON p.id_dusun = d.id
       ORDER BY p.id ASC
@@ -66,16 +69,16 @@ exports.getPosyanduList = async (req, res) => {
 
 // Create posyandu baru (Admin) - Cek Duplikat
 exports.createPosyandu = async (req, res) => {
-  const { nama_posyandu, dusun } = req.body;
+  const { nama_posyandu, dusun, id_dusun } = req.body;
   try {
     const existing = await db.query('SELECT * FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1)', [nama_posyandu.trim()]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: `Posyandu '${nama_posyandu.trim()}' sudah ada di database!` });
     }
-    const dusunObj = await resolveDusun(dusun);
+    const targetDusunId = await resolveDusunId(id_dusun || dusun);
     const result = await db.query(
-      'INSERT INTO posyandu (nama_posyandu, dusun, id_dusun) VALUES ($1, $2, $3) RETURNING *',
-      [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id]
+      'INSERT INTO posyandu (nama_posyandu, id_dusun) VALUES ($1, $2) RETURNING *',
+      [nama_posyandu.trim(), targetDusunId]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -107,11 +110,11 @@ exports.getSummary = async (req, res) => {
       ORDER BY kr.id ASC
     `);
     const posyanduResult = await db.query(`
-      SELECT p.id, p.nama_posyandu, COALESCE(d.nama_dusun, p.dusun) AS dusun, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
+      SELECT p.id, p.nama_posyandu, COALESCE(d.nama_dusun, 'Dusun Krajan') AS dusun, COALESCE(SUM(krb.jumlah_jiwa), 0) AS total_jiwa
       FROM posyandu p
       LEFT JOIN dusun d ON p.id_dusun = d.id
       LEFT JOIN kelompok_rentan_banjir krb ON p.id = krb.id_posyandu
-      GROUP BY p.id, p.nama_posyandu, d.nama_dusun, p.dusun
+      GROUP BY p.id, p.nama_posyandu, d.nama_dusun
       ORDER BY p.id ASC
     `);
     res.json({
@@ -128,9 +131,9 @@ exports.getSummary = async (req, res) => {
 
 // Save Batch Kelompok Rentan & Update Posyandu (Admin)
 exports.saveBatch = async (req, res) => {
-  let { id_posyandu, nama_posyandu, dusun, categories } = req.body;
+  let { id_posyandu, nama_posyandu, dusun, id_dusun, categories } = req.body;
   try {
-    const dusunObj = await resolveDusun(dusun);
+    const targetDusunId = await resolveDusunId(id_dusun || dusun);
 
     if (!id_posyandu && nama_posyandu) {
       // Buat posyandu baru
@@ -140,19 +143,19 @@ exports.saveBatch = async (req, res) => {
       }
 
       const posRes = await db.query(
-        'INSERT INTO posyandu (nama_posyandu, dusun, id_dusun) VALUES ($1, $2, $3) RETURNING id',
-        [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id]
+        'INSERT INTO posyandu (nama_posyandu, id_dusun) VALUES ($1, $2) RETURNING id',
+        [nama_posyandu.trim(), targetDusunId]
       );
       id_posyandu = posRes.rows[0].id;
     } else if (id_posyandu && nama_posyandu) {
-      // Edit nama posyandu dan dusun jika ada
+      // Edit nama posyandu dan id_dusun jika ada
       const existing = await db.query('SELECT id FROM posyandu WHERE LOWER(nama_posyandu) = LOWER($1) AND id != $2', [nama_posyandu.trim(), id_posyandu]);
       if (existing.rows.length > 0) {
         return res.status(400).json({ error: `Nama Posyandu '${nama_posyandu.trim()}' sudah digunakan oleh Posyandu lain!` });
       }
       await db.query(
-        'UPDATE posyandu SET nama_posyandu = $1, dusun = $2, id_dusun = $3 WHERE id = $4',
-        [nama_posyandu.trim(), dusunObj.nama_dusun, dusunObj.id, id_posyandu]
+        'UPDATE posyandu SET nama_posyandu = $1, id_dusun = $2 WHERE id = $3',
+        [nama_posyandu.trim(), targetDusunId, id_posyandu]
       );
     }
 
