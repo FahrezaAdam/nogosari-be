@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const sensorRoutes = require('./routes/sensorRoutes');
 const rentanBanjirRoutes = require('./routes/rentanBanjirRoutes');
 const posyanduRoutes = require('./routes/posyanduRoutes');
+const dusunRoutes = require('./routes/dusunRoutes');
 const pengaduanRoutes = require('./routes/pengaduanRoutes');
 
 // Swagger UI
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sensor', sensorRoutes);
 app.use('/api/rentan-banjir', rentanBanjirRoutes);
 app.use('/api/posyandu', posyanduRoutes);
+app.use('/api/dusun', dusunRoutes);
 app.use('/api/pengaduan', pengaduanRoutes);
 
 app.get('/', async (req, res) => {
