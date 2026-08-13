@@ -9,6 +9,7 @@ const { startCleanupCron } = require('./services/cleanupService');
 const authRoutes = require('./routes/authRoutes');
 const sensorRoutes = require('./routes/sensorRoutes');
 const rentanBanjirRoutes = require('./routes/rentanBanjirRoutes');
+const posyanduRoutes = require('./routes/posyanduRoutes');
 const pengaduanRoutes = require('./routes/pengaduanRoutes');
 
 // Swagger UI
@@ -34,9 +35,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
 app.use('/api/auth', authRoutes);
 app.use('/api/sensor', sensorRoutes);
 app.use('/api/rentan-banjir', rentanBanjirRoutes);
+app.use('/api/posyandu', posyanduRoutes);
 app.use('/api/pengaduan', pengaduanRoutes);
-// TODO: app.use('/api/layanan', layananRoutes);
-// TODO: app.use('/api/statistik', statistikRoutes);
 
 app.get('/', async (req, res) => {
   try {
@@ -61,5 +61,4 @@ app.listen(port, () => {
   console.log(`Server listening at http://localhost:${port}`);
 });
 
-// Export app untuk Vercel Serverless Functions
 module.exports = app;
