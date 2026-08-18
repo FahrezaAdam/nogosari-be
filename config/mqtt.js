@@ -1,8 +1,8 @@
 const mqtt = require('mqtt');
 
-const MQTT_BROKER = process.env.MQTT_BROKER || 'wss://2fe780a2e3024f5795317b7f121248a1.s1.eu.hivemq.cloud:8884/mqtt';
-const MQTT_USERNAME = process.env.MQTT_USERNAME || 'PPKORMAWA123';
-const MQTT_PASSWORD = process.env.MQTT_PASSWORD || 'ppkews123';
+const MQTT_BROKER = process.env.MQTT_BROKER;
+const MQTT_USERNAME = process.env.MQTT_USERNAME;
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD;
 
 const client = mqtt.connect(MQTT_BROKER, {
   clientId: `nogosari_be_${Math.random().toString(16).slice(3)}`,
