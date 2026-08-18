@@ -40,14 +40,38 @@ const startMqttService = () => {
       }
 
       const device = deviceResult.rows[0];
+      const val = Number(nilai_ketinggian);
+      const thWaspada = Number(device.threshold_waspada);
+      const thSiaga = Number(device.threshold_siaga);
+      const thBahaya = Number(device.threshold_bahaya);
+
       let status_siaga = 'Aman';
 
-      if (nilai_ketinggian >= device.threshold_bahaya) {
-        status_siaga = 'Bahaya';
-      } else if (nilai_ketinggian >= device.threshold_siaga) {
-        status_siaga = 'Siaga';
-      } else if (nilai_ketinggian >= device.threshold_waspada) {
-        status_siaga = 'Waspada';
+      // Cek apakah threshold menggunakan mode jarak ultrasonik (semakin kecil = semakin bahaya/dekat)
+      const isDistanceMode = thBahaya < thWaspada;
+
+      if (isDistanceMode) {
+        // Mode Jarak Ultrasonik (contoh: Waspada <= 100cm, Siaga <= 50cm, Bahaya <= 20cm)
+        if (val <= thBahaya) {
+          status_siaga = 'Bahaya';
+        } else if (val <= thSiaga) {
+          status_siaga = 'Siaga';
+        } else if (val <= thWaspada) {
+          status_siaga = 'Waspada';
+        } else {
+          status_siaga = 'Aman';
+        }
+      } else {
+        // Mode Ketinggian Normal (contoh: Waspada >= 100cm, Siaga >= 150cm, Bahaya >= 200cm)
+        if (val >= thBahaya) {
+          status_siaga = 'Bahaya';
+        } else if (val >= thSiaga) {
+          status_siaga = 'Siaga';
+        } else if (val >= thWaspada) {
+          status_siaga = 'Waspada';
+        } else {
+          status_siaga = 'Aman';
+        }
       }
 
       // === SMART THROTTLING (Penghemat DB Neon) ===
