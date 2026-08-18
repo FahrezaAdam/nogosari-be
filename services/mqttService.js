@@ -1,33 +1,56 @@
 const mqttClient = require('../config/mqtt');
 const db = require('../config/db');
 
-// Topik yang disubscribe, bisa menggunakan wildcard (+) untuk semua sensor desa nogosari
-const TOPIC = 'desa/nogosari/sungai/+/ketinggian';
+// Topik yang disubscribe:
+// 1. water_level/jarak (Format kode ESP32 DYPA16 Anda)
+// 2. desa/nogosari/sungai/+/ketinggian (Format standar)
+const TOPICS = [
+  'water_level/jarak',
+  'desa/nogosari/sungai/+/ketinggian'
+];
 
 // Cache sederhana untuk menyimpan waktu & nilai pembacaan terakhir per sensor
 const lastReadings = {};
 
 const startMqttService = () => {
   mqttClient.on('connect', () => {
-    mqttClient.subscribe(TOPIC, (err) => {
-      if (err) {
-        console.error('Failed to subscribe to topic:', err);
-      } else {
-        console.log(`Subscribed to MQTT topic: ${TOPIC}`);
-      }
+    TOPICS.forEach((topic) => {
+      mqttClient.subscribe(topic, (err) => {
+        if (err) {
+          console.error(`Failed to subscribe to topic ${topic}:`, err);
+        } else {
+          console.log(`Subscribed to MQTT topic: ${topic}`);
+        }
+      });
     });
   });
 
   mqttClient.on('message', async (topic, message) => {
     try {
-      // Asumsi payload berupa JSON: { "id_sensor": "SN-001", "nilai_ketinggian": 120.5 }
-      const payload = JSON.parse(message.toString());
-      console.log(`Received MQTT message on ${topic}:`, payload);
+      const messageStr = message.toString().trim();
+      console.log(`Received MQTT message on ${topic}:`, messageStr);
 
-      const { id_sensor, nilai_ketinggian } = payload;
-      
-      if (!id_sensor || nilai_ketinggian === undefined) {
-        console.error('Payload MQTT tidak valid:', payload);
+      let id_sensor = 'SN-001';
+      let nilai_ketinggian; // dalam centimeter (cm)
+
+      // Cek apakah pesan berupa JSON atau angka langsung (format ESP32 DYPA16)
+      if (topic === 'water_level/jarak') {
+        const jarakM = parseFloat(messageStr);
+        if (isNaN(jarakM)) {
+          console.error('Payload water_level/jarak tidak valid:', messageStr);
+          return;
+        }
+        // Konversi dari meter ke centimeter untuk konsistensi database (misal 1.50m -> 150cm)
+        nilai_ketinggian = parseFloat((jarakM * 100).toFixed(2));
+      } else {
+        // Format JSON standar: { "id_sensor": "SN-001", "nilai_ketinggian": 120.5 }
+        const payload = JSON.parse(messageStr);
+        id_sensor = payload.id_sensor || 'SN-001';
+        nilai_ketinggian = payload.nilai_ketinggian;
+      }
+
+      if (nilai_ketinggian === undefined || isNaN(nilai_ketinggian)) {
+        console.error('Nilai ketinggian tidak valid:', messageStr);
         return;
       }
 
@@ -36,7 +59,7 @@ const startMqttService = () => {
       
       if (deviceResult.rows.length === 0) {
         console.error(`Sensor ${id_sensor} tidak terdaftar di database.`);
-        return; // Abaikan data jika sensor tidak terdaftar
+        return;
       }
 
       const device = deviceResult.rows[0];
@@ -47,22 +70,23 @@ const startMqttService = () => {
 
       let status_siaga = 'Aman';
 
-      // Cek apakah threshold menggunakan mode jarak ultrasonik (semakin kecil = semakin bahaya/dekat)
-      const isDistanceMode = thBahaya < thWaspada;
+      // Cek mode ultrasonik (semakin kecil jarak = semakin dekat air = bahaya)
+      // Default dari kode ESP32: Bahaya <= 60cm (0.60m), Siaga <= 150cm (1.50m)
+      const isDistanceMode = thBahaya < thWaspada || topic === 'water_level/jarak';
 
       if (isDistanceMode) {
-        // Mode Jarak Ultrasonik (contoh: Waspada <= 100cm, Siaga <= 50cm, Bahaya <= 20cm)
-        if (val <= thBahaya) {
+        // Mengikuti ambang batas ESP32: Bahaya <= 60cm, Siaga <= 150cm
+        const limitBahaya = thBahaya < thWaspada ? thBahaya : 60.0;
+        const limitSiaga = thSiaga < thWaspada ? thSiaga : 150.0;
+
+        if (val <= limitBahaya) {
           status_siaga = 'Bahaya';
-        } else if (val <= thSiaga) {
+        } else if (val <= limitSiaga) {
           status_siaga = 'Siaga';
-        } else if (val <= thWaspada) {
-          status_siaga = 'Waspada';
         } else {
           status_siaga = 'Aman';
         }
       } else {
-        // Mode Ketinggian Normal (contoh: Waspada >= 100cm, Siaga >= 150cm, Bahaya >= 200cm)
         if (val >= thBahaya) {
           status_siaga = 'Bahaya';
         } else if (val >= thSiaga) {
@@ -77,20 +101,19 @@ const startMqttService = () => {
       // === SMART THROTTLING (Penghemat DB Neon) ===
       const last = lastReadings[id_sensor];
       const now = Date.now();
-      const MIN_INTERVAL_AMAN = 5 * 60 * 1000; // Minimal simpan 5 menit sekali jika status Aman
-      const MIN_INTERVAL_WARNING = 10 * 1000;  // Minimal simpan 10 detik sekali jika Waspada/Siaga/Bahaya
+      const MIN_INTERVAL_AMAN = 5 * 60 * 1000; // Simpan minimal 5 menit sekali jika status Aman
+      const MIN_INTERVAL_WARNING = 5 * 1000;   // Simpan minimal 5 detik sekali jika Siaga/Bahaya
 
       if (last) {
         const timeDiff = now - last.time;
         const heightDiff = Math.abs(nilai_ketinggian - last.ketinggian);
 
-        // Jika status Aman DAN belum 5 menit DAN perubahan air kurang dari 0.5 cm -> Abaikan simpan ke DB
-        if (status_siaga === 'Aman' && timeDiff < MIN_INTERVAL_AMAN && heightDiff < 0.5) {
-          console.log(`⏳ [THROTTLED] Skip insert for ${id_sensor}: Water status 'Aman' & small change (${heightDiff} cm)`);
+        // Jika status Aman & belum 5 menit & perubahan air < 1 cm -> Abaikan simpan ke DB
+        if (status_siaga === 'Aman' && timeDiff < MIN_INTERVAL_AMAN && heightDiff < 1.0) {
           return;
         }
 
-        // Jika status Waspada/Siaga/Bahaya tapi jarak pengiriman < 10 detik -> Abaikan simpan
+        // Jika Siaga/Bahaya tapi pengiriman < 5 detik -> Abaikan simpan
         if (status_siaga !== 'Aman' && timeDiff < MIN_INTERVAL_WARNING) {
           return;
         }
@@ -101,6 +124,8 @@ const startMqttService = () => {
         INSERT INTO sensor_readings (id_sensor, nilai_ketinggian, status_siaga)
         VALUES ($1, $2, $3)
       `, [id_sensor, nilai_ketinggian, status_siaga]);
+
+      console.log(`Saved reading to DB: ${id_sensor} -> ${nilai_ketinggian} cm (${status_siaga})`);
 
       // Update cache data terakhir
       lastReadings[id_sensor] = {
