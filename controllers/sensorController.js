@@ -78,3 +78,4 @@ exports.updateThreshold = async (req, res) => {
     res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
   }
 };
+
