@@ -121,7 +121,7 @@ ON CONFLICT (id_posyandu, id_kategori) DO NOTHING;
 
 -- Insert data dummy admin awal (Password default: 'password123' di hash dengan bcrypt)
 INSERT INTO admins (nama, email, password, role) 
-VALUES ('Admin Desa', 'admin@nogosari.desa.id', '$2b$10$tZ20k9/UeK3HlE6V6a8KNuGInOqQ0O/LzQh/Q2Tq.fE23k51F9F8O', 'superadmin')
+VALUES ('Admin Desa', 'admin@nogosari.desa.id', '$2b$10$eokJMbW9oGhhCMEQkyiQWOa1SvpR423KniS79DvMnzJuW8kEzwz8y', 'superadmin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert data dummy sensor device
