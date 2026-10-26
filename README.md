@@ -511,12 +511,13 @@ nogosari-be (Node.js)
 
 ### Status Siaga Sensor
 
-| Status      | Kondisi                      |
-| ----------- | ---------------------------- |
-| **Aman**    | Di bawah ambang waspada      |
-| **Waspada** | Mencapai `threshold_waspada` |
-| **Siaga**   | Mencapai `threshold_siaga`   |
-| **Bahaya**  | Mencapai `threshold_bahaya`  |
+Sesuai indikator ambang batas SI-Tanggap Desa Nogosari:
+
+| Status     | Rentang Ketinggian Air | Nilai Ambang (Database)        |
+| ---------- | ---------------------- | ------------------------------ |
+| **Aman**   | 0 sampai 4 m           | `nilai_ketinggian <= 400.00`   |
+| **Siaga**  | lebih dari 4 sampai 6 m| `nilai_ketinggian > 400.00`    |
+| **Bahaya** | lebih dari 6 m         | `nilai_ketinggian > 600.00`    |
 
 ### Integrasi Monitoring Frontend
 
@@ -528,7 +529,7 @@ Endpoint `GET /api/sensor/latest` dan `GET /api/sensor/history` mengirimkan `nil
 | Siaga | lebih dari 4 sampai 6 m |
 | Bahaya | lebih dari 6 m |
 
-Pada batas tepat 4 m, frontend menampilkan status Aman. Status Siaga berlaku untuk bacaan di atas 4 m hingga 6 m. Status backend tetap ditentukan oleh konfigurasi `threshold_waspada`, `threshold_siaga`, dan `threshold_bahaya` pada perangkat sensor.
+Pada batas tepat 4 m, status ditampilkan sebagai Aman. Status Siaga berlaku untuk bacaan di atas 4 m hingga 6 m, dan di atas 6 m adalah Bahaya. Status di backend dihitung secara sinkron melalui `threshold_siaga` (400 cm) dan `threshold_bahaya` (600 cm).
 
 **Catatan satuan:** payload MQTT `water_level/jarak` berisi jarak sensor ke permukaan air dan dikonversi ke sentimeter. Nilai jarak ini belum otomatis menjadi ketinggian air absolut. Untuk memakai ambang frontend di atas pada data jarak, tinggi/posisi acuan pemasangan sensor harus diketahui dan konversi perlu dilakukan sebelum nilai dikirim ke tampilan.
 

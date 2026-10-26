@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS sensor_devices (
     nama_lokasi VARCHAR(255) NOT NULL,
     koordinat_lat DECIMAL(10, 8),
     koordinat_long DECIMAL(11, 8),
-    threshold_waspada DECIMAL(5, 2) NOT NULL,
-    threshold_siaga DECIMAL(5, 2) NOT NULL,
-    threshold_bahaya DECIMAL(5, 2) NOT NULL,
+    threshold_waspada DECIMAL(8, 2) NOT NULL,
+    threshold_siaga DECIMAL(8, 2) NOT NULL,
+    threshold_bahaya DECIMAL(8, 2) NOT NULL,
     status_aktif BOOLEAN DEFAULT true
 );
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS sensor_devices (
 CREATE TABLE IF NOT EXISTS sensor_readings (
     id SERIAL PRIMARY KEY,
     id_sensor VARCHAR(50) REFERENCES sensor_devices(id_sensor) ON DELETE CASCADE,
-    nilai_ketinggian DECIMAL(5, 2) NOT NULL,
+    nilai_ketinggian DECIMAL(8, 2) NOT NULL,
     satuan VARCHAR(10) DEFAULT 'cm',
     status_siaga VARCHAR(20) NOT NULL, 
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -124,7 +124,12 @@ INSERT INTO admins (nama, email, password, role)
 VALUES ('Admin Desa', 'admin@nogosari.desa.id', '$2b$10$eokJMbW9oGhhCMEQkyiQWOa1SvpR423KniS79DvMnzJuW8kEzwz8y', 'superadmin')
 ON CONFLICT (email) DO NOTHING;
 
--- Insert data dummy sensor device
+-- Insert data master sensor device
+-- Sesuai indikator ambang batas FE:
+-- Aman: 0-4m (<= 400cm), Siaga: 4-6m (400-600cm), Bahaya: > 6m (> 600cm)
 INSERT INTO sensor_devices (id_sensor, nama_lokasi, koordinat_lat, koordinat_long, threshold_waspada, threshold_siaga, threshold_bahaya)
-VALUES ('SN-001', 'Sungai Nogosari Utama', -8.123456, 113.123456, 100.00, 150.00, 200.00)
-ON CONFLICT (id_sensor) DO NOTHING;
+VALUES ('SN-001', 'Sungai Nogosari Utama', -8.123456, 113.123456, 400.00, 400.00, 600.00)
+ON CONFLICT (id_sensor) DO UPDATE SET
+  threshold_waspada = EXCLUDED.threshold_waspada,
+  threshold_siaga = EXCLUDED.threshold_siaga,
+  threshold_bahaya = EXCLUDED.threshold_bahaya;

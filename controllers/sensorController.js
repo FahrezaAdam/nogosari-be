@@ -54,16 +54,18 @@ exports.updateThreshold = async (req, res) => {
   const { id_sensor } = req.params;
   const { threshold_waspada, threshold_siaga, threshold_bahaya } = req.body;
 
-  if (!threshold_waspada || !threshold_siaga || !threshold_bahaya) {
-    return res.status(400).json({ error: 'Semua nilai threshold harus diisi.' });
+  if (!threshold_siaga || !threshold_bahaya) {
+    return res.status(400).json({ error: 'Nilai threshold siaga dan bahaya harus diisi.' });
   }
+
+  const finalWaspada = threshold_waspada || threshold_siaga;
 
   try {
     const result = await db.query(`
       UPDATE sensor_devices 
       SET threshold_waspada = $1, threshold_siaga = $2, threshold_bahaya = $3
       WHERE id_sensor = $4 RETURNING *
-    `, [threshold_waspada, threshold_siaga, threshold_bahaya, id_sensor]);
+    `, [finalWaspada, threshold_siaga, threshold_bahaya, id_sensor]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Sensor tidak ditemukan.' });

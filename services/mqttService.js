@@ -70,35 +70,33 @@ const startMqttService = () => {
 
       let status_siaga = 'Aman';
 
-      // Cek mode ultrasonik (semakin kecil jarak = semakin dekat air = bahaya)
-      // Default dari kode ESP32: Bahaya <= 60cm (0.60m), Siaga <= 150cm (1.50m)
-      const isDistanceMode = thBahaya < thWaspada || topic === 'water_level/jarak';
+      // Cek apakah mode terbalik/jarak (semakin kecil angka = semakin dekat air = semakin bahaya)
+      const isDistanceMode = thBahaya < thWaspada && thBahaya < thSiaga;
 
       if (isDistanceMode) {
-        // Mengikuti ambang batas ESP32: Bahaya <= 60cm, Siaga <= 150cm
-        const limitBahaya = thBahaya < thWaspada ? thBahaya : 60.0;
-        const limitSiaga = thSiaga < thWaspada ? thSiaga : 150.0;
-
-        if (val <= limitBahaya) {
+        // Mode Jarak Ultrasonik (jika threshold diatur terbalik)
+        if (val <= thBahaya) {
           status_siaga = 'Bahaya';
-        } else if (val <= limitSiaga) {
+        } else if (val <= thSiaga) {
           status_siaga = 'Siaga';
         } else {
           status_siaga = 'Aman';
         }
       } else {
-        if (val >= thBahaya) {
+        // Mode Ketinggian Air (Sesuai Frontend Desa Nogosari):
+        // Aman: 0 - 4m (<= 400cm)
+        // Siaga: 4 - 6m (401cm - 600cm)
+        // Bahaya: > 6m (> 600cm)
+        if (val > thBahaya) {
           status_siaga = 'Bahaya';
-        } else if (val >= thSiaga) {
+        } else if (val > thSiaga) {
           status_siaga = 'Siaga';
-        } else if (val >= thWaspada) {
-          status_siaga = 'Waspada';
         } else {
           status_siaga = 'Aman';
         }
       }
 
-      // === SMART THROTTLING (Penghemat DB Neon) ===
+      // === SMART THROTTLING (Optimasi Penulisan Database) ===
       const last = lastReadings[id_sensor];
       const now = Date.now();
       const MIN_INTERVAL_AMAN = 5 * 60 * 1000; // Simpan minimal 5 menit sekali jika status Aman
@@ -107,15 +105,19 @@ const startMqttService = () => {
       if (last) {
         const timeDiff = now - last.time;
         const heightDiff = Math.abs(nilai_ketinggian - last.ketinggian);
+        const statusChanged = last.status !== status_siaga;
 
-        // Jika status Aman & belum 5 menit & perubahan air < 1 cm -> Abaikan simpan ke DB
-        if (status_siaga === 'Aman' && timeDiff < MIN_INTERVAL_AMAN && heightDiff < 1.0) {
-          return;
-        }
+        // Jika status tidak berubah, terapkan throttling
+        if (!statusChanged) {
+          // Jika status Aman & belum 5 menit & perubahan air < 1 cm -> Abaikan simpan ke DB
+          if (status_siaga === 'Aman' && timeDiff < MIN_INTERVAL_AMAN && heightDiff < 1.0) {
+            return;
+          }
 
-        // Jika Siaga/Bahaya tapi pengiriman < 5 detik -> Abaikan simpan
-        if (status_siaga !== 'Aman' && timeDiff < MIN_INTERVAL_WARNING) {
-          return;
+          // Jika Siaga/Bahaya tapi pengiriman < 5 detik -> Abaikan simpan
+          if (status_siaga !== 'Aman' && timeDiff < MIN_INTERVAL_WARNING) {
+            return;
+          }
         }
       }
 
