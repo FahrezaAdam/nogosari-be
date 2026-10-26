@@ -20,7 +20,13 @@ const swaggerDocument = require('./swagger.json');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://desanogosari.web.id',
+    'https://www.desanogosari.web.id',
+    'https://nogosari-fe.vercel.app',
+  ],
+}));
 app.use(express.json());
 
 // Setup Swagger Endpoint
