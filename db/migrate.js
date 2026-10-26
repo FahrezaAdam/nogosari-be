@@ -1,12 +1,12 @@
 // db/migrate.js
 // Menjalankan migrasi database secara programatik (tanpa init.sql)
 
-const db = require('../config/db');
+const { pool } = require('../config/db');
 
 async function migrate() {
   console.log('🚀 Starting Database Migration...');
 
-  const client = await db.connect();
+  const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
@@ -63,17 +63,34 @@ async function migrate() {
     `);
     console.log('  ✔ Table layanan ready');
 
-    // ─── 5. Buat tabel posyandu ───────────────────────────────────────────
+    // ─── 5. Buat tabel dusun ──────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dusun (
+        id         SERIAL PRIMARY KEY,
+        nama_dusun VARCHAR(100) NOT NULL UNIQUE
+      )
+    `);
+    console.log('  ✔ Table dusun ready');
+
+    // ─── 6. Buat tabel posyandu ───────────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS posyandu (
         id            SERIAL PRIMARY KEY,
         nama_posyandu VARCHAR(150) NOT NULL UNIQUE,
+        id_dusun      INT REFERENCES dusun(id) ON DELETE SET NULL,
         dusun         VARCHAR(100)
       )
     `);
+    // Pastikan kolom id_dusun & dusun ada jika tabel sudah pernah dibuat sebelumnya
+    await client.query(`
+      ALTER TABLE posyandu 
+      ADD COLUMN IF NOT EXISTS id_dusun INT REFERENCES dusun(id) ON DELETE SET NULL;
+      ALTER TABLE posyandu 
+      ADD COLUMN IF NOT EXISTS dusun VARCHAR(100);
+    `);
     console.log('  ✔ Table posyandu ready');
 
-    // ─── 6. Buat tabel kategori_rentan ────────────────────────────────────
+    // ─── 7. Buat tabel kategori_rentan ────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS kategori_rentan (
         id             SERIAL PRIMARY KEY,
@@ -82,7 +99,7 @@ async function migrate() {
     `);
     console.log('  ✔ Table kategori_rentan ready');
 
-    // ─── 7. Buat tabel kelompok_rentan_banjir ────────────────────────────
+    // ─── 8. Buat tabel kelompok_rentan_banjir ────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS kelompok_rentan_banjir (
         id           SERIAL PRIMARY KEY,
@@ -94,7 +111,7 @@ async function migrate() {
     `);
     console.log('  ✔ Table kelompok_rentan_banjir ready');
 
-    // ─── 8. Buat tabel pengaduan ─────────────────────────────────────────
+    // ─── 9. Buat tabel pengaduan ─────────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS pengaduan (
         id            SERIAL PRIMARY KEY,
@@ -106,15 +123,29 @@ async function migrate() {
     `);
     console.log('  ✔ Table pengaduan ready');
 
+    // ─── Seed: Data master dusun ──────────────────────────────────────────
+    await client.query(`
+      INSERT INTO dusun (id, nama_dusun) VALUES
+        (1, 'Dusun Gumukbagu'),
+        (2, 'Dusun Gumukgebang'),
+        (3, 'Dusun Gumuklimo'),
+        (4, 'Dusun Gumuksari'),
+        (5, 'Dusun Krajan')
+      ON CONFLICT (id) DO NOTHING
+    `);
+    console.log('  ✔ Seed dusun done');
+
     // ─── Seed: Data master posyandu ───────────────────────────────────────
     await client.query(`
-      INSERT INTO posyandu (id, nama_posyandu, dusun) VALUES
-        (1, 'Posyandu Bougenville 59 - Krajan',    'Krajan'),
-        (2, 'Posyandu Bougenville 60 - Krajan',    'Krajan'),
-        (3, 'Posyandu Bougenville 61 - Krajan',    'Krajan'),
-        (4, 'Posyandu Bougenville 62 - Gumuk Bago','Gumuk Bago'),
-        (5, 'Posyandu Bougenville 63 - Gumuk Bago','Gumuk Bago')
-      ON CONFLICT (id) DO NOTHING
+      INSERT INTO posyandu (id, nama_posyandu, id_dusun, dusun) VALUES
+        (1, 'Posyandu Bougenville 59 - Krajan',    5, 'Krajan'),
+        (2, 'Posyandu Bougenville 60 - Krajan',    5, 'Krajan'),
+        (3, 'Posyandu Bougenville 61 - Krajan',    5, 'Krajan'),
+        (4, 'Posyandu Bougenville 62 - Gumuk Bago', 1, 'Gumuk Bago'),
+        (5, 'Posyandu Bougenville 63 - Gumuk Bago', 1, 'Gumuk Bago')
+      ON CONFLICT (id) DO UPDATE SET
+        id_dusun = EXCLUDED.id_dusun,
+        dusun = EXCLUDED.dusun
     `);
     console.log('  ✔ Seed posyandu done');
 

@@ -15,6 +15,7 @@ REST API untuk **Sistem Website Desa Nogosari** — mencakup monitoring ketinggi
 - [Menjalankan Server](#-menjalankan-server)
 - [Dokumentasi API](#-dokumentasi-api)
 - [Daftar Endpoint](#-daftar-endpoint)
+- [Deploy ke VPS (Rekomendasi Production)](#-deploy-ke-vps-rekomendasi-production)
 - [Deploy ke Vercel](#-deploy-ke-vercel)
 - [Arsitektur Sistem](#-arsitektur-sistem)
 
@@ -115,15 +116,20 @@ Kemudian isi nilai-nilai yang diperlukan (lihat bagian [Konfigurasi Environment]
 Buka file `.env` dan sesuaikan nilainya:
 
 ```env
-# ─── Database ───────────────────────────────────────────────────
-# Format: postgresql://username:password@host/database?sslmode=require
-DATABASE_URL=postgresql://username:password@host/database?sslmode=require
+# ─── Database PostgreSQL (Format Lokal / VPS) ───────────────────
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password_postgres_anda
+DB_NAME=nogosari_db
+
+# Atau jika menggunakan Cloud DB (Neon / Supabase):
+# DATABASE_URL=postgresql://username:password@host/database?sslmode=require
 
 # ─── Server ─────────────────────────────────────────────────────
 PORT=3000
 
 # ─── JWT ────────────────────────────────────────────────────────
-# Gunakan string acak yang panjang & aman
 JWT_SECRET=your_super_secret_jwt_key_here
 
 # ─── MQTT Broker ────────────────────────────────────────────────
@@ -319,6 +325,118 @@ Respons:
 ```bash
 curl http://localhost:3000/api/pengaduan \
   -H "Authorization: Bearer <token_anda>"
+```
+
+---
+
+## 🖥️ Deploy ke VPS (Rekomendasi Production)
+
+VPS adalah platform yang paling direkomendasikan karena **MQTT Service (IoT)** dan **Auto-Cleanup Cron** membutuhkan proses Node.js yang berjalan 24/7 di latar belakang.
+
+### 1. Install Kebutuhan di VPS (Ubuntu 22.04 / 24.04)
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git ufw nginx postgresql postgresql-contrib
+
+# Install Node.js v20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install PM2
+sudo npm install -g pm2
+```
+
+### 2. Setup PostgreSQL Lokal di VPS
+
+```bash
+# Masuk ke PostgreSQL
+sudo -u postgres psql
+
+# Buat database & user baru
+CREATE DATABASE nogosari_db;
+CREATE USER nogosari_user WITH ENCRYPTED PASSWORD 'password_rahasia_anda';
+GRANT ALL PRIVILEGES ON DATABASE nogosari_db TO nogosari_user;
+\c nogosari_db
+GRANT ALL ON SCHEMA public TO nogosari_user;
+\q
+```
+
+### 3. Clone Proyek & Konfigurasi .env
+
+```bash
+cd /var/www
+sudo git clone <URL_REPO_ANDA> nogosari-be
+sudo chown -R $USER:$USER /var/www/nogosari-be
+cd /var/www/nogosari-be
+
+npm install --omit=dev
+cp .env.example .env
+nano .env
+```
+
+Isi konfigurasi database di `.env` VPS:
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=nogosari_user
+DB_PASSWORD=password_rahasia_anda
+DB_NAME=nogosari_db
+PORT=3000
+JWT_SECRET=rahasia_jwt_anda_yang_sangat_panjang_dan_aman
+
+MQTT_BROKER=wss://your-cluster.s1.eu.hivemq.cloud:8884/mqtt
+MQTT_USERNAME=your_mqtt_username
+MQTT_PASSWORD=your_mqtt_password
+```
+
+### 4. Jalankan Migrasi Database
+
+```bash
+npm run migrate
+```
+
+### 5. Jalankan Aplikasi dengan PM2
+
+```bash
+pm2 start index.js --name "nogosari-be"
+pm2 startup
+pm2 save
+```
+
+### 6. Setup Reverse Proxy Nginx & SSL
+
+Buat file konfigurasi `/etc/nginx/sites-available/nogosari-be`:
+```nginx
+server {
+    listen 80;
+    server_name api.domainanda.com; # atau IP VPS jika belum ada domain
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Aktifkan konfigurasi Nginx:
+```bash
+sudo ln -s /etc/nginx/sites-available/nogosari-be /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+Pasang SSL gratis (Let's Encrypt / Certbot jika sudah memiliki domain):
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d api.domainanda.com
 ```
 
 ---
