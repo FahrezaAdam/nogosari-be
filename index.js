@@ -46,6 +46,12 @@ app.use('/api/posyandu', posyanduRoutes);
 app.use('/api/dusun', dusunRoutes);
 app.use('/api/pengaduan', pengaduanRoutes);
 
+// Robots.txt to prevent indexing of raw backend API
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nDisallow: /api/\nAllow: /api-docs\n');
+});
+
 app.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT NOW()');
